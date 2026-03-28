@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { colors, font, fontSize, spacing, radius } from '../utils/theme'
@@ -17,6 +17,12 @@ export default function Portail() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const tel = params.get('tel')
+    if (tel) setTelephone(formaterAffichage(tel))
+  }, [])
 
   const handleChange = (e) => {
     setTelephone(formaterAffichage(e.target.value))

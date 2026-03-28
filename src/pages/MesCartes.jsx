@@ -136,7 +136,23 @@ export default function MesCartes() {
   const [clientNom, setClientNom] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [installPrompt, setInstallPrompt] = useState(null)
+  const [estInstalle, setEstInstalle] = useState(false)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setInstallPrompt(e) }
+    window.addEventListener('beforeinstallprompt', handler)
+    if (window.matchMedia('(display-mode: standalone)').matches) setEstInstalle(true)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  const ajouterEcranAccueil = async () => {
+    if (!installPrompt) return
+    installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    if (outcome === 'accepted') { setEstInstalle(true); setInstallPrompt(null) }
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('portail_token')
@@ -218,6 +234,33 @@ export default function MesCartes() {
 
       {/* Contenu */}
       <div style={{ maxWidth: 480, margin: '0 auto', padding: `${spacing.lg}px`, position: 'relative' }}>
+
+        {installPrompt && !estInstalle && (
+          <div style={{
+            background: `${colors.blue}18`, border: `1px solid ${colors.blue}33`,
+            borderRadius: radius.xl, padding: `${spacing.md}px ${spacing.lg}px`,
+            marginBottom: spacing.lg,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md
+          }}>
+            <div>
+              <p style={{ color: colors.text, fontWeight: font.weight.semibold, fontSize: fontSize.base, margin: `0 0 2px` }}>
+                Accès rapide
+              </p>
+              <p style={{ color: colors.textMuted, fontSize: 12, margin: 0 }}>
+                Ajoutez le portefeuille à votre écran d'accueil
+              </p>
+            </div>
+            <button onClick={ajouterEcranAccueil} style={{
+              background: `linear-gradient(135deg, ${colors.blue}, ${colors.blueDark})`,
+              border: 'none', borderRadius: radius.md,
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              color: colors.text, fontSize: fontSize.base,
+              fontWeight: font.weight.semibold, fontFamily: font.sans,
+              cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0
+            }}>+ Installer</button>
+          </div>
+        )}
+
         <h1 style={{
           fontSize: fontSize.xxl, fontWeight: font.weight.bold,
           color: colors.text, margin: `0 0 ${spacing.xs}px`, letterSpacing: '-0.02em'

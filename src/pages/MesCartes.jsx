@@ -155,6 +155,7 @@ export default function MesCartes() {
   const [error, setError] = useState('')
   const [installPrompt, setInstallPrompt] = useState(null)
   const [estInstalle, setEstInstalle] = useState(false)
+  const [notifStatut, setNotifStatut] = useState('idle') // idle | demande | ok | refuse
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -181,7 +182,8 @@ export default function MesCartes() {
       .then(res => {
         setCartes(res.data.cartes)
         if (res.data.cartes.length > 0) setClientNom(res.data.cartes[0].client_nom || '')
-        abonnerPush(token)
+        if (Notification.permission === 'granted') abonnerPush()
+        else if (Notification.permission !== 'denied') setNotifStatut('idle')
       })
       .catch(e => {
         if (e.response?.status === 401) {
@@ -194,11 +196,13 @@ export default function MesCartes() {
       .finally(() => setLoading(false))
   }, [])
 
-  const abonnerPush = async (token) => {
+  const abonnerPush = async () => {
     if (!('Notification' in window) || !('serviceWorker' in navigator) || !VAPID_PUBLIC_KEY) return
+    const token = localStorage.getItem('portail_token')
+    setNotifStatut('demande')
     try {
       const permission = await Notification.requestPermission()
-      if (permission !== 'granted') return
+      if (permission !== 'granted') { setNotifStatut('refuse'); return }
       const reg = await navigator.serviceWorker.ready
       const existant = await reg.pushManager.getSubscription()
       const sub = existant || await reg.pushManager.subscribe({
@@ -208,7 +212,8 @@ export default function MesCartes() {
       await axios.post(`${API}/portail/subscribe-push`, { push_token: sub.toJSON() }, {
         headers: { Authorization: `Bearer ${token}` }
       })
-    } catch { /* silencieux — les notifs ne sont pas critiques */ }
+      setNotifStatut('ok')
+    } catch { setNotifStatut('idle') }
   }
 
   const handleLogout = () => {
@@ -293,6 +298,32 @@ export default function MesCartes() {
               fontWeight: font.weight.semibold, fontFamily: font.sans,
               cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0
             }}>+ Installer</button>
+          </div>
+        )}
+
+        {notifStatut === 'idle' && (
+          <div style={{
+            background: `${colors.surface}`, border: `1px solid ${colors.surface2}`,
+            borderRadius: radius.xl, padding: `${spacing.md}px ${spacing.lg}px`,
+            marginBottom: spacing.lg,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md
+          }}>
+            <div>
+              <p style={{ color: colors.text, fontWeight: font.weight.semibold, fontSize: fontSize.base, margin: `0 0 2px` }}>
+                Restez informé
+              </p>
+              <p style={{ color: colors.textMuted, fontSize: 12, margin: 0 }}>
+                Recevez les offres de vos établissements
+              </p>
+            </div>
+            <button onClick={abonnerPush} style={{
+              background: `linear-gradient(135deg, ${colors.blue}, ${colors.blueDark})`,
+              border: 'none', borderRadius: radius.md,
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              color: colors.text, fontSize: fontSize.base,
+              fontWeight: font.weight.semibold, fontFamily: font.sans,
+              cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0
+            }}>Activer</button>
           </div>
         )}
 

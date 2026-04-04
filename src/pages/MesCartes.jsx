@@ -197,12 +197,18 @@ export default function MesCartes() {
   }, [])
 
   const abonnerPush = async () => {
-    if (!('Notification' in window) || !('serviceWorker' in navigator) || !VAPID_PUBLIC_KEY) return
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+      setNotifStatut('erreur_navigateur'); return
+    }
+    if (!VAPID_PUBLIC_KEY) {
+      setNotifStatut('erreur_vapid'); return
+    }
     const token = localStorage.getItem('portail_token')
     setNotifStatut('demande')
     try {
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') { setNotifStatut('refuse'); return }
+      setNotifStatut('abonnement')
       const reg = await navigator.serviceWorker.ready
       const existant = await reg.pushManager.getSubscription()
       const sub = existant || await reg.pushManager.subscribe({
@@ -213,7 +219,9 @@ export default function MesCartes() {
         headers: { Authorization: `Bearer ${token}` }
       })
       setNotifStatut('ok')
-    } catch { setNotifStatut('idle') }
+    } catch (e) {
+      setNotifStatut('erreur_' + (e?.message || 'inconnue'))
+    }
   }
 
   const handleLogout = () => {
@@ -298,6 +306,18 @@ export default function MesCartes() {
               fontWeight: font.weight.semibold, fontFamily: font.sans,
               cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0
             }}>+ Installer</button>
+          </div>
+        )}
+
+        {!['idle', 'ok'].includes(notifStatut) && notifStatut !== 'refuse' && (
+          <div style={{
+            background: `${colors.surface}`, border: `1px solid ${colors.surface2}`,
+            borderRadius: radius.xl, padding: `${spacing.md}px ${spacing.lg}px`,
+            marginBottom: spacing.lg, color: colors.textMuted, fontSize: 13
+          }}>
+            {notifStatut === 'demande' && '⏳ En attente de permission...'}
+            {notifStatut === 'abonnement' && '⏳ Abonnement en cours...'}
+            {notifStatut.startsWith('erreur_') && `❌ Erreur : ${notifStatut.replace('erreur_', '')}`}
           </div>
         )}
 

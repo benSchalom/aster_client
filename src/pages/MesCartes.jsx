@@ -45,6 +45,14 @@ function Barre({ valeur, max, couleur }) {
 
 function CarteItem({ carte }) {
   const tamponsMax = carte.tampons_max || 10
+  const [walletUrl, setWalletUrl] = useState(null)
+
+  useEffect(() => {
+    const token = localStorage.getItem('portail_token')
+    axios.get(`${API}${carte.wallet_url}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => setWalletUrl(res.data.save_url))
+      .catch(() => {})
+  }, [carte.wallet_url])
   return (
     <div style={{
       background: colors.surface, border: `1px solid ${colors.surface2}`,
@@ -122,8 +130,9 @@ function CarteItem({ carte }) {
       )}
 
       <a
-        href={`${API}${carte.wallet_url}`}
+        href={walletUrl || '#'}
         target="_blank" rel="noopener noreferrer"
+        style={{ pointerEvents: walletUrl ? 'auto' : 'none', opacity: walletUrl ? 1 : 0.4 }}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           gap: spacing.sm, marginTop: spacing.lg,

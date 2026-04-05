@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { QRCodeSVG } from 'qrcode.react'
 import { colors, font, fontSize, spacing, radius } from '../utils/theme'
 
 const API = import.meta.env.VITE_API_URL
@@ -13,22 +14,33 @@ function urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)))
 }
 
-const TYPE_LABEL = {
-  fidelite: 'Fidélité',
-  abonnement_seances: 'Séances',
-  abonnement_temporel: 'Abonnement',
+const TYPE_CONFIG = {
+  fidelite:            { label: 'Fidélité',    color: '#2A7DE1', gradient: 'linear-gradient(135deg, #2A7DE1, #1A3A6B)' },
+  abonnement_seances:  { label: 'Séances',     color: '#14C87A', gradient: 'linear-gradient(135deg, #14C87A, #0A7A4A)' },
+  abonnement_temporel: { label: 'Abonnement',  color: '#FF6B35', gradient: 'linear-gradient(135deg, #FF6B35, #C03A0A)' },
 }
 
-const TYPE_COLOR = {
-  fidelite: colors.blue,
-  abonnement_seances: colors.success,
-  abonnement_temporel: colors.orange,
+function Badge({ type }) {
+  const cfg = TYPE_CONFIG[type] || TYPE_CONFIG.fidelite
+  return (
+    <span style={{
+      background: cfg.color + '22',
+      color: cfg.color,
+      fontSize: fontSize.xs,
+      fontWeight: font.weight.semibold,
+      padding: `3px ${spacing.sm}px`,
+      borderRadius: radius.xl,
+      letterSpacing: '0.06em',
+      textTransform: 'uppercase',
+    }}>{cfg.label}</span>
+  )
 }
 
 function CarteItem({ carte }) {
   const tamponsMax = carte.tampons_max || 10
-  const couleur = TYPE_COLOR[carte.type] || colors.blue
+  const cfg = TYPE_CONFIG[carte.type] || TYPE_CONFIG.fidelite
   const [walletUrl, setWalletUrl] = useState(null)
+  const [qrVisible, setQrVisible] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem('portail_token')
@@ -45,22 +57,22 @@ function CarteItem({ carte }) {
       overflow: 'hidden',
       marginBottom: spacing.md,
     }}>
-      {/* Bande de couleur type */}
-      <div style={{ height: 3, background: couleur }} />
+      {/* Bandeau dégradé en haut */}
+      <div style={{ height: 4, background: cfg.gradient }} />
 
       <div style={{ padding: spacing.lg }}>
         {/* En-tête */}
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg }}>
           {carte.pro_logo ? (
             <img src={carte.pro_logo} alt="" style={{
-              width: 40, height: 40, borderRadius: radius.sm, objectFit: 'cover', flexShrink: 0,
+              width: 44, height: 44, borderRadius: radius.md, objectFit: 'cover', flexShrink: 0,
             }} />
           ) : (
             <div style={{
-              width: 40, height: 40, borderRadius: radius.sm, flexShrink: 0,
-              background: couleur + '22',
+              width: 44, height: 44, borderRadius: radius.md, flexShrink: 0,
+              background: cfg.color + '22',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: couleur, fontSize: fontSize.md, fontWeight: font.weight.bold,
+              color: cfg.color, fontSize: fontSize.lg, fontWeight: font.weight.bold,
             }}>
               {(carte.pro_nom || 'C')[0].toUpperCase()}
             </div>
@@ -68,14 +80,12 @@ function CarteItem({ carte }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{
               color: colors.text, fontWeight: font.weight.semibold,
-              fontSize: fontSize.md, margin: 0,
+              fontSize: fontSize.md, margin: `0 0 4px`,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
               {carte.pro_nom || 'Commerce'}
             </p>
-            <p style={{ color: colors.textMuted, fontSize: fontSize.sm, margin: 0 }}>
-              {TYPE_LABEL[carte.type] || 'Carte'}
-            </p>
+            <Badge type={carte.type} />
           </div>
         </div>
 
@@ -88,19 +98,21 @@ function CarteItem({ carte }) {
                 {carte.tampons} / {tamponsMax}
               </span>
             </div>
-            <div style={{ background: colors.bg, borderRadius: radius.sm, height: 4, overflow: 'hidden', marginBottom: spacing.md }}>
+            <div style={{ background: colors.bg, borderRadius: radius.sm, height: 5, overflow: 'hidden', marginBottom: spacing.md }}>
               <div style={{
                 width: `${Math.min((carte.tampons / tamponsMax) * 100, 100)}%`,
-                height: '100%', background: couleur,
-                borderRadius: radius.sm, transition: 'width 0.4s ease',
+                height: '100%',
+                background: cfg.gradient,
+                borderRadius: radius.sm,
+                transition: 'width 0.4s ease',
               }} />
             </div>
             <div className="tampons-grid">
               {Array.from({ length: tamponsMax }).map((_, i) => (
                 <div key={i} style={{
-                  width: 24, height: 24, borderRadius: '50%',
-                  background: i < carte.tampons ? couleur : colors.bg,
-                  border: `1.5px solid ${i < carte.tampons ? couleur : colors.border}`,
+                  width: 26, height: 26, borderRadius: '50%',
+                  background: i < carte.tampons ? cfg.gradient : 'transparent',
+                  border: `2px solid ${i < carte.tampons ? cfg.color : colors.border}`,
                 }} />
               ))}
             </div>
@@ -111,14 +123,14 @@ function CarteItem({ carte }) {
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.sm }}>
               <span style={{ color: colors.textMuted, fontSize: fontSize.base }}>Séances restantes</span>
-              <span style={{ color: couleur, fontWeight: font.weight.bold, fontSize: fontSize.xl }}>
+              <span style={{ color: cfg.color, fontWeight: font.weight.bold, fontSize: fontSize.xxl }}>
                 {carte.seances_restantes}
               </span>
             </div>
-            <div style={{ background: colors.bg, borderRadius: radius.sm, height: 4, overflow: 'hidden' }}>
+            <div style={{ background: colors.bg, borderRadius: radius.sm, height: 5, overflow: 'hidden' }}>
               <div style={{
                 width: `${Math.min((carte.seances_restantes / 10) * 100, 100)}%`,
-                height: '100%', background: couleur, borderRadius: radius.sm,
+                height: '100%', background: cfg.gradient, borderRadius: radius.sm,
               }} />
             </div>
           </>
@@ -139,6 +151,44 @@ function CarteItem({ carte }) {
           </div>
         )}
 
+        {/* QR Code */}
+        <div style={{ marginTop: spacing.lg }}>
+          <button
+            onClick={() => setQrVisible(v => !v)}
+            style={{
+              width: '100%',
+              padding: `${spacing.sm + 2}px`,
+              background: colors.bg,
+              border: `1px solid ${colors.border}`,
+              borderRadius: radius.md,
+              color: colors.textMuted,
+              fontSize: fontSize.base,
+              fontWeight: font.weight.medium,
+              fontFamily: font.sans,
+              cursor: 'pointer',
+              textAlign: 'center',
+            }}
+          >
+            {qrVisible ? 'Masquer le code QR' : 'Afficher le code QR'}
+          </button>
+
+          {qrVisible && (
+            <div style={{
+              marginTop: spacing.sm,
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              gap: spacing.sm,
+              background: '#FFFFFF',
+              borderRadius: radius.md,
+              padding: spacing.md,
+            }}>
+              <QRCodeSVG value={carte.serial} size={160} />
+              <p style={{ color: '#555', fontSize: fontSize.xs, margin: 0, letterSpacing: '0.04em' }}>
+                {carte.serial}
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Google Wallet */}
         <a
           href={walletUrl || '#'}
@@ -147,8 +197,8 @@ function CarteItem({ carte }) {
           onClick={e => !walletUrl && e.preventDefault()}
           style={{
             display: 'block',
-            marginTop: spacing.lg,
-            padding: `${spacing.sm + 2}px ${spacing.md}px`,
+            marginTop: spacing.sm,
+            padding: `${spacing.sm + 2}px`,
             background: colors.bg,
             border: `1px solid ${colors.border}`,
             borderRadius: radius.md,
@@ -261,9 +311,9 @@ export default function MesCartes() {
             background: 'none',
             border: `1px solid ${colors.border}`,
             borderRadius: radius.md,
-            padding: `${spacing.xs}px ${spacing.md}px`,
+            padding: `${spacing.sm}px ${spacing.lg}px`,
             color: colors.textMuted,
-            fontSize: fontSize.base,
+            fontSize: fontSize.md,
             cursor: 'pointer',
             fontFamily: font.sans,
           }}>Déconnexion</button>
@@ -336,7 +386,7 @@ export default function MesCartes() {
         {/* Titre */}
         <div style={{ marginBottom: spacing.lg }}>
           {prenom && (
-            <p style={{ color: colors.textMuted, fontSize: fontSize.base, margin: `0 0 ${spacing.xs}px` }}>
+            <p style={{ color: colors.text, fontSize: fontSize.lg, fontWeight: font.weight.semibold, margin: `0 0 ${spacing.xs}px` }}>
               Bonjour, {prenom}
             </p>
           )}

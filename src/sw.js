@@ -18,12 +18,18 @@ self.addEventListener('push', (event) => {
   // Ajouter le nom du commerce au titre si disponible
   const titre_affiche = pro_nom ? `${pro_nom} — ${titre}` : titre
 
+  // Date formatée dans le corps de la notification
+  const maintenant = new Date().toLocaleDateString('fr-CA', {
+    day: 'numeric', month: 'long', year: 'numeric'
+  })
+  const corps = `${message}\n\n${maintenant}`
+
   // Tag basé sur le contenu : si la notif arrive en double, la 2e remplace la 1ère
   const tag = 'annonce-' + (pro_nom || '') + '-' + titre.slice(0, 20)
 
   event.waitUntil(
     self.registration.showNotification(titre_affiche, {
-      body: message,
+      body: corps,
       icon: icon,
       badge: '/web-app-manifest-192x192.png',
       vibrate: [200, 100, 200],

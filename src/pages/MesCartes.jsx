@@ -151,6 +151,33 @@ function CarteItem({ carte }) {
           </div>
         )}
 
+        {/* Annonce active */}
+        {carte.annonce && (
+          <div style={{
+            marginTop: spacing.md,
+            padding: spacing.md,
+            background: cfg.color + '11',
+            border: `1px solid ${cfg.color}33`,
+            borderRadius: radius.md,
+            display: 'flex',
+            gap: spacing.sm,
+            alignItems: 'flex-start',
+          }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={cfg.color} strokeWidth="2" style={{ flexShrink: 0, marginTop: 2 }}>
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <div>
+              <p style={{ color: cfg.color, fontSize: fontSize.xs, fontWeight: font.weight.semibold, margin: `0 0 2px`, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {carte.annonce.titre}
+              </p>
+              <p style={{ color: colors.text, fontSize: fontSize.base, margin: 0, lineHeight: 1.4 }}>
+                {carte.annonce.message}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* QR Code */}
         <div style={{ marginTop: spacing.lg }}>
           <button

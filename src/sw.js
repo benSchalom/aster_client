@@ -6,11 +6,18 @@ precacheAndRoute(self.__WB_MANIFEST)
 // Réception d'une notification push depuis le backend
 self.addEventListener('push', (event) => {
   if (!event.data) return
-  const { titre, message } = event.data.json()
+  const { titre, message, logo, pro_nom } = event.data.json()
+
+  // Utiliser le logo du commerce si disponible, sinon l'icône de l'app
+  const icon = logo || '/web-app-manifest-192x192.png'
+
+  // Ajouter le nom du commerce au titre si disponible
+  const titre_affiche = pro_nom ? `${pro_nom} — ${titre}` : titre
+
   event.waitUntil(
-    self.registration.showNotification(titre, {
+    self.registration.showNotification(titre_affiche, {
       body: message,
-      icon: '/web-app-manifest-192x192.png',
+      icon: icon,
       badge: '/web-app-manifest-192x192.png',
       vibrate: [200, 100, 200],
     })

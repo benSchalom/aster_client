@@ -79,8 +79,6 @@ export default function PortailVerify() {
       padding: spacing.lg,
       boxSizing: 'border-box'
     }}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-
       <div style={{
         position: 'fixed', inset: 0, pointerEvents: 'none',
         background: `radial-gradient(ellipse 70% 40% at 50% 0%, ${colors.blue}22 0%, transparent 70%)`
@@ -99,7 +97,7 @@ export default function PortailVerify() {
             <span style={{
               color: colors.text, fontWeight: font.weight.bold,
               fontSize: fontSize.sm, letterSpacing: '0.06em'
-            }}>Portefeuille ASTER</span>
+            }}>ASTER Wallet</span>
           </div>
         </div>
 

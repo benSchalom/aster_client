@@ -233,8 +233,6 @@ export default function MesCartes() {
 
   return (
     <div style={{ minHeight: '100dvh', background: colors.bg, fontFamily: font.sans, boxSizing: 'border-box' }}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-
       <div style={{
         position: 'fixed', inset: 0, pointerEvents: 'none',
         background: `radial-gradient(ellipse 70% 40% at 50% 0%, ${colors.blue}18 0%, transparent 70%)`
@@ -262,7 +260,7 @@ export default function MesCartes() {
                 color: colors.textMuted, fontSize: 10,
                 fontWeight: font.weight.medium,
                 letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0
-              }}>Portefeuille ASTER</p>
+              }}>ASTER Wallet</p>
               {prenom && (
                 <p style={{ color: colors.text, fontSize: fontSize.base, fontWeight: font.weight.semibold, margin: 0 }}>
                   Bonjour, {prenom} 👋

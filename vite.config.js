@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'web-app-manifest-192x192.png', 'web-app-manifest-512x512.png'],
       manifest: {
-        name: 'Portefeuille ASTER',
-        short_name: 'Portefeuille',
+        name: 'ASTER Wallet',
+        short_name: 'ASTER Wallet',
         description: 'Toutes vos cartes fidélité ASTER en un seul endroit',
         theme_color: '#0B1120',
         background_color: '#0B1120',

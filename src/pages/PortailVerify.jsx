@@ -74,74 +74,50 @@ export default function PortailVerify() {
     <div style={{
       minHeight: '100dvh',
       background: colors.bg,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
       fontFamily: font.sans,
-      padding: spacing.lg,
-      boxSizing: 'border-box'
+      padding: `${spacing.lg}px ${spacing.md}px`,
+      boxSizing: 'border-box',
     }}>
-      <div style={{
-        position: 'fixed', inset: 0, pointerEvents: 'none',
-        background: `radial-gradient(ellipse 70% 40% at 50% 0%, ${colors.blue}22 0%, transparent 70%)`
-      }} />
+      <div style={{ width: '100%', maxWidth: 400 }}>
 
-      <div style={{ width: '100%', maxWidth: '420px', position: 'relative' }}>
+        <button onClick={() => navigate('/connexion')} style={{
+          background: 'none', border: 'none',
+          color: colors.textMuted, fontSize: fontSize.base,
+          cursor: 'pointer', padding: 0,
+          marginBottom: spacing.xl,
+          fontFamily: font.sans,
+          display: 'flex', alignItems: 'center', gap: spacing.xs,
+        }}>
+          ← Retour
+        </button>
 
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: spacing.xxl }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: spacing.sm }}>
-            <img
-              src="/web-app-manifest-192x192.png"
-              alt="ASTER"
-              style={{ width: 72, height: 72, borderRadius: radius.lg }}
-            />
-            <span style={{
-              color: colors.text, fontWeight: font.weight.bold,
-              fontSize: fontSize.sm, letterSpacing: '0.06em'
-            }}>ASTER Wallet</span>
-          </div>
+        <div style={{ marginBottom: spacing.xl }}>
+          <h1 style={{
+            color: colors.text,
+            fontSize: fontSize.xl,
+            fontWeight: font.weight.bold,
+            margin: `0 0 ${spacing.xs}px`,
+            letterSpacing: '-0.02em',
+          }}>Vérification</h1>
+          <p style={{ color: colors.textMuted, fontSize: fontSize.base, margin: 0 }}>
+            Code envoyé au +1 {telFormate}
+          </p>
         </div>
 
         <div style={{
           background: colors.surface,
-          border: `1px solid ${colors.surface2}`,
-          borderRadius: radius.xxl,
-          padding: `${spacing.xl}px ${spacing.lg}px`
+          border: `1px solid ${colors.border}`,
+          borderRadius: radius.xl,
+          padding: spacing.lg,
         }}>
-          <button onClick={() => navigate('/connexion')} style={{
-            background: 'none', border: 'none',
-            color: colors.textMuted, fontSize: fontSize.base,
-            cursor: 'pointer', padding: 0,
-            marginBottom: spacing.lg,
-            display: 'flex', alignItems: 'center', gap: spacing.xs,
-            fontFamily: font.sans
-          }}>← Retour</button>
-
-          <h1 style={{
-            fontSize: fontSize.xxl,
-            fontWeight: font.weight.bold,
-            color: colors.text,
-            margin: `0 0 ${spacing.sm}px`,
-            letterSpacing: '-0.02em',
-            lineHeight: 1.2
-          }}>Vérification</h1>
-
-          <p style={{
-            color: colors.textMuted,
-            fontSize: fontSize.base,
-            margin: `0 0 ${spacing.xl}px`,
-            lineHeight: 1.6
-          }}>
-            Code envoyé au{' '}
-            <span style={{ color: colors.text, fontWeight: font.weight.medium }}>
-              +1 {telFormate}
-            </span>
-          </p>
-
-          {/* OTP inputs */}
           <div style={{
             display: 'flex', gap: spacing.sm,
-            marginBottom: spacing.lg,
-            justifyContent: 'center'
+            justifyContent: 'center',
+            marginBottom: error ? spacing.md : spacing.lg,
           }}>
             {code.map((d, i) => (
               <input
@@ -151,13 +127,13 @@ export default function PortailVerify() {
                 onChange={e => handleChange(i, e.target.value)}
                 onKeyDown={e => handleKeyDown(i, e)}
                 style={{
-                  width: 46, height: 54,
+                  width: 44, height: 52,
                   textAlign: 'center',
-                  background: d ? `${colors.blue}22` : colors.surface2,
+                  background: colors.bg,
                   border: `1px solid ${
-                    error ? colors.error + '88'
+                    error ? colors.error + '66'
                     : d ? colors.blue + '88'
-                    : colors.surface2
+                    : colors.border
                   }`,
                   borderRadius: radius.md,
                   color: colors.text,
@@ -165,7 +141,7 @@ export default function PortailVerify() {
                   fontWeight: font.weight.semibold,
                   fontFamily: font.sans,
                   outline: 'none',
-                  transition: 'all 0.15s'
+                  transition: 'border-color 0.15s',
                 }}
               />
             ))}
@@ -173,16 +149,16 @@ export default function PortailVerify() {
 
           {error && (
             <p style={{
-              color: colors.error, fontSize: fontSize.base,
-              textAlign: 'center', marginBottom: spacing.md
+              color: colors.error, fontSize: fontSize.sm,
+              textAlign: 'center', margin: `0 0 ${spacing.md}px`,
             }}>{error}</p>
           )}
 
           {loading && (
             <p style={{
-              color: colors.textMuted, fontSize: fontSize.base,
-              textAlign: 'center', marginBottom: spacing.md
-            }}>Vérification...</p>
+              color: colors.textMuted, fontSize: fontSize.sm,
+              textAlign: 'center', margin: `0 0 ${spacing.md}px`,
+            }}>Vérification en cours...</p>
           )}
 
           <div style={{ textAlign: 'center' }}>
@@ -190,9 +166,9 @@ export default function PortailVerify() {
               background: 'none', border: 'none',
               color: resendCooldown > 0 ? colors.textMuted : colors.blue,
               fontSize: fontSize.base,
-              cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer',
+              cursor: resendCooldown > 0 ? 'default' : 'pointer',
               fontFamily: font.sans,
-              opacity: resendCooldown > 0 ? 0.5 : 1
+              opacity: resendCooldown > 0 ? 0.5 : 1,
             }}>
               {resendCooldown > 0 ? `Renvoyer dans ${resendCooldown}s` : 'Renvoyer le code'}
             </button>

@@ -47,17 +47,7 @@ export default function Portail() {
   }
 
   return (
-    <div style={{
-      minHeight: '100dvh',
-      background: colors.bg,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: font.sans,
-      padding: `${spacing.lg}px ${spacing.md}px`,
-      boxSizing: 'border-box',
-    }}>
+    <div className="auth-page" style={{ background: colors.bg, fontFamily: font.sans }}>
       <div style={{ width: '100%', maxWidth: 400 }}>
 
         <div style={{ textAlign: 'center', marginBottom: spacing.xl }}>

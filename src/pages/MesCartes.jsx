@@ -95,7 +95,7 @@ function CarteItem({ carte }) {
                 borderRadius: radius.sm, transition: 'width 0.4s ease',
               }} />
             </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <div className="tampons-grid">
               {Array.from({ length: tamponsMax }).map((_, i) => (
                 <div key={i} style={{
                   width: 24, height: 24, borderRadius: '50%',
@@ -246,16 +246,8 @@ export default function MesCartes() {
     <div style={{ minHeight: '100dvh', background: colors.bg, fontFamily: font.sans }}>
 
       {/* Header */}
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 10,
-        background: colors.bg,
-        borderBottom: `1px solid ${colors.border}`,
-        padding: `${spacing.md}px ${spacing.lg}px`,
-      }}>
-        <div style={{
-          maxWidth: 480, margin: '0 auto',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        }}>
+      <div className="wallet-header">
+        <div className="wallet-header-inner">
           <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
             <img src="/web-app-manifest-192x192.png" alt="ASTER Wallet"
               style={{ width: 32, height: 32, borderRadius: radius.sm }} />
@@ -279,7 +271,7 @@ export default function MesCartes() {
       </div>
 
       {/* Contenu */}
-      <div style={{ maxWidth: 480, margin: '0 auto', padding: `${spacing.lg}px ${spacing.md}px` }}>
+      <div className="cartes-content">
 
         {/* Bannière installer */}
         {installPrompt && (

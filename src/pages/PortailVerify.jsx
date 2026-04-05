@@ -71,17 +71,7 @@ export default function PortailVerify() {
     : ''
 
   return (
-    <div style={{
-      minHeight: '100dvh',
-      background: colors.bg,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: font.sans,
-      padding: `${spacing.lg}px ${spacing.md}px`,
-      boxSizing: 'border-box',
-    }}>
+    <div className="auth-page" style={{ background: colors.bg, fontFamily: font.sans }}>
       <div style={{ width: '100%', maxWidth: 400 }}>
 
         <button onClick={() => navigate('/connexion')} style={{
@@ -114,11 +104,7 @@ export default function PortailVerify() {
           borderRadius: radius.xl,
           padding: spacing.lg,
         }}>
-          <div style={{
-            display: 'flex', gap: spacing.sm,
-            justifyContent: 'center',
-            marginBottom: error ? spacing.md : spacing.lg,
-          }}>
+          <div className="otp-grid" style={{ marginBottom: error ? spacing.md : spacing.lg }}>
             {code.map((d, i) => (
               <input
                 key={i}
@@ -127,8 +113,6 @@ export default function PortailVerify() {
                 onChange={e => handleChange(i, e.target.value)}
                 onKeyDown={e => handleKeyDown(i, e)}
                 style={{
-                  width: 44, height: 52,
-                  textAlign: 'center',
                   background: colors.bg,
                   border: `1px solid ${
                     error ? colors.error + '66'

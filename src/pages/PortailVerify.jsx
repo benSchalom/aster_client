@@ -14,6 +14,7 @@ export default function PortailVerify() {
   const navigate = useNavigate()
   const { state } = useLocation()
   const telephone = state?.telephone
+  const carteSerial = state?.carteSerial || ''
 
   useEffect(() => {
     if (!telephone) navigate('/connexion')
@@ -44,7 +45,13 @@ export default function PortailVerify() {
     setLoading(true)
     try {
       const res = await axios.post(`${API}/portail/verify-otp`, { telephone, code: codeStr })
-      localStorage.setItem('portail_token', res.data.token)
+      const token = res.data.token
+      localStorage.setItem('portail_token', token)
+      if (carteSerial) {
+        await axios.post(`${API}/portail/claim-carte`, { serial: carteSerial }, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      }
       navigate('/cartes')
     } catch {
       setError('Code invalide ou expiré')

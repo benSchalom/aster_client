@@ -18,10 +18,12 @@ export default function Portail() {
   const [error, setError] = useState('')
   const navigate = useNavigate()
 
+  const [carteSerial, setCarteSerial] = useState('')
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const tel = params.get('tel')
-    if (tel) setTelephone(formaterAffichage(tel))
+    const carte = params.get('carte')
+    if (carte) setCarteSerial(carte)
   }, [])
 
   const handleChange = (e) => {
@@ -38,7 +40,7 @@ export default function Portail() {
     setLoading(true)
     try {
       await axios.post(`${API}/portail/send-otp`, { telephone: chiffres })
-      navigate('/connexion/verify', { state: { telephone: chiffres } })
+      navigate('/connexion/verify', { state: { telephone: chiffres, carteSerial } })
     } catch (e) {
       setError(e.response?.data?.error || "Erreur lors de l'envoi")
     } finally {

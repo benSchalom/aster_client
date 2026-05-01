@@ -24,6 +24,8 @@ export default function Portail() {
     const params = new URLSearchParams(window.location.search)
     const carte = params.get('carte')
     if (carte) setCarteSerial(carte)
+    const tel = params.get('tel')
+    if (tel) setTelephone(formaterAffichage(tel))
   }, [])
 
   const handleChange = (e) => {

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { Html5Qrcode } from 'html5-qrcode'
 import { QRCodeSVG } from 'qrcode.react'
 import { colors, font, fontSize, spacing, radius } from '../utils/theme'
 
@@ -57,11 +58,9 @@ function CarteItem({ carte }) {
       overflow: 'hidden',
       marginBottom: spacing.md,
     }}>
-      {/* Bandeau dégradé en haut */}
       <div style={{ height: 4, background: cfg.gradient }} />
 
       <div style={{ padding: spacing.lg }}>
-        {/* En-tête */}
         <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg }}>
           {carte.pro_logo ? (
             <img src={carte.pro_logo} alt="" style={{
@@ -89,7 +88,6 @@ function CarteItem({ carte }) {
           </div>
         </div>
 
-        {/* Contenu selon le type */}
         {carte.type === 'fidelite' && (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.sm }}>
@@ -151,7 +149,6 @@ function CarteItem({ carte }) {
           </div>
         )}
 
-        {/* Annonce active */}
         {carte.annonce && (
           <div style={{
             marginTop: spacing.md,
@@ -178,7 +175,6 @@ function CarteItem({ carte }) {
           </div>
         )}
 
-        {/* QR Code */}
         <div style={{ marginTop: spacing.lg }}>
           <button
             onClick={() => setQrVisible(v => !v)}
@@ -216,7 +212,6 @@ function CarteItem({ carte }) {
           )}
         </div>
 
-        {/* Google Wallet */}
         <a
           href={walletUrl || '#'}
           target="_blank"
@@ -250,13 +245,33 @@ export default function MesCartes() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [installPrompt, setInstallPrompt] = useState(null)
+  const [showIOSBanner, setShowIOSBanner] = useState(false)
   const [notifStatut, setNotifStatut] = useState('idle')
+  const [reloadTrigger, setReloadTrigger] = useState(0)
+
+  // Scanner
+  const [scannerOuvert, setScannerOuvert] = useState(false)
+  const [scanEtat, setScanEtat] = useState('idle') // 'idle' | 'erreur' | 'succes'
+  const [scanMessage, setScanMessage] = useState('')
+  const [scanNomReqis, setScanNomRequis] = useState(false)
+  const [scanSlug, setScanSlug] = useState('')
+  const [nomSaisi, setNomSaisi] = useState('')
+  const scannerRef = useRef(null)
+
   const navigate = useNavigate()
 
+  // Détection install Android
   useEffect(() => {
     const handler = (e) => { e.preventDefault(); setInstallPrompt(e) }
     window.addEventListener('beforeinstallprompt', handler)
     return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  // Détection install iOS
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    const isStandalone = window.navigator.standalone === true
+    if (isIOS && !isStandalone) setShowIOSBanner(true)
   }, [])
 
   const ajouterEcranAccueil = async () => {
@@ -266,10 +281,12 @@ export default function MesCartes() {
     if (outcome === 'accepted') setInstallPrompt(null)
   }
 
+  // Chargement des cartes
   useEffect(() => {
     const token = localStorage.getItem('portail_token')
     if (!token) { navigate('/connexion'); return }
 
+    setLoading(true)
     axios.get(`${API}/portail/mes-cartes`, {
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -287,7 +304,112 @@ export default function MesCartes() {
         }
       })
       .finally(() => setLoading(false))
-  }, [])
+  }, [reloadTrigger])
+
+  // Démarrage/arrêt du scanner
+  useEffect(() => {
+    if (!scannerOuvert) return
+
+    let instance = null
+    let done = false
+
+    const demarrer = async () => {
+      try {
+        instance = new Html5Qrcode('qr-scanner-zone')
+        scannerRef.current = instance
+        await instance.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          async (texte) => {
+            if (done) return
+            done = true
+            try { await instance.stop() } catch {}
+            traiterScan(texte)
+          },
+          () => {}
+        )
+      } catch {
+        setScanEtat('erreur')
+        setScanMessage('Accès à la caméra refusé — vérifiez les permissions de votre navigateur')
+      }
+    }
+
+    demarrer()
+
+    return () => {
+      done = true
+      if (instance) instance.stop().catch(() => {})
+    }
+  }, [scannerOuvert])
+
+  const traiterScan = async (texte) => {
+    try {
+      let slug = ''
+      try {
+        const url = new URL(texte)
+        const match = url.pathname.match(/\/rejoindre\/([^/?#]+)/)
+        slug = match?.[1] || ''
+      } catch {
+        slug = texte.trim()
+      }
+
+      if (!slug) {
+        setScanEtat('erreur')
+        setScanMessage('Ce QR code ne correspond pas à un établissement ASTER')
+        return
+      }
+
+      await appelRejoindre(slug)
+    } catch {
+      setScanEtat('erreur')
+      setScanMessage('Erreur de lecture du QR code')
+    }
+  }
+
+  const appelRejoindre = async (slug, nom) => {
+    const token = localStorage.getItem('portail_token')
+    try {
+      const body = nom ? { full_name: nom } : {}
+      const res = await axios.post(`${API}/portail/rejoindre/${slug}`, body, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setScanEtat('succes')
+      setScanMessage(`Carte ajoutée — ${res.data.pro_nom}`)
+      setTimeout(() => {
+        setReloadTrigger(t => t + 1)
+        fermerScanner()
+      }, 1800)
+    } catch (err) {
+      if (err.response?.data?.need_name) {
+        setScanNomRequis(true)
+        setScanSlug(slug)
+        setScanEtat('besoin_nom')
+      } else {
+        setScanEtat('erreur')
+        setScanMessage(err.response?.data?.error || "Erreur lors de l'ajout de la carte")
+      }
+    }
+  }
+
+  const ouvrirScanner = () => {
+    setScanEtat('idle')
+    setScanMessage('')
+    setScanNomRequis(false)
+    setScanSlug('')
+    setNomSaisi('')
+    setScannerOuvert(true)
+  }
+
+  const fermerScanner = () => {
+    if (scannerRef.current) {
+      scannerRef.current.stop().catch(() => {})
+      scannerRef.current = null
+    }
+    setScannerOuvert(false)
+    setScanEtat('idle')
+    setScanMessage('')
+    setScanNomRequis(false)
+  }
 
   const abonnerPush = async () => {
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return
@@ -350,7 +472,39 @@ export default function MesCartes() {
       {/* Contenu */}
       <div className="cartes-content">
 
-        {/* Bannière installer */}
+        {/* Bannière iOS */}
+        {showIOSBanner && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: spacing.md,
+            background: 'rgba(42,125,225,0.08)',
+            border: '1px solid rgba(42,125,225,0.2)',
+            borderRadius: radius.lg,
+            padding: `${spacing.md}px ${spacing.lg}px`,
+            marginBottom: spacing.md,
+          }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ color: colors.text, fontWeight: font.weight.semibold, fontSize: fontSize.base, margin: `0 0 2px` }}>
+                Installer ASTER Wallet
+              </p>
+              <p style={{ color: colors.textMuted, fontSize: fontSize.sm, margin: 0 }}>
+                Appuyez sur le bouton Partager puis "Sur l'écran d'accueil"
+              </p>
+            </div>
+            <button
+              onClick={() => setShowIOSBanner(false)}
+              style={{
+                background: 'none', border: 'none',
+                color: colors.textMuted, fontSize: fontSize.xl,
+                cursor: 'pointer', padding: 0, lineHeight: 1, flexShrink: 0,
+              }}
+            >
+              x
+            </button>
+          </div>
+        )}
+
+        {/* Bannière Android */}
         {installPrompt && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -410,17 +564,44 @@ export default function MesCartes() {
           </div>
         )}
 
-        {/* Titre */}
-        <div style={{ marginBottom: spacing.lg }}>
-          {prenom && (
-            <p style={{ color: colors.text, fontSize: fontSize.lg, fontWeight: font.weight.semibold, margin: `0 0 ${spacing.xs}px` }}>
-              Bonjour, {prenom}
-            </p>
-          )}
-          <h1 style={{
-            color: colors.text, fontSize: fontSize.xxl,
-            fontWeight: font.weight.bold, margin: 0, letterSpacing: '-0.02em',
-          }}>Mes cartes</h1>
+        {/* Titre + bouton ajouter */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: spacing.lg }}>
+          <div>
+            {prenom && (
+              <p style={{ color: colors.text, fontSize: fontSize.lg, fontWeight: font.weight.semibold, margin: `0 0 ${spacing.xs}px` }}>
+                Bonjour, {prenom}
+              </p>
+            )}
+            <h1 style={{
+              color: colors.text, fontSize: fontSize.xxl,
+              fontWeight: font.weight.bold, margin: 0, letterSpacing: '-0.02em',
+            }}>Mes cartes</h1>
+          </div>
+
+          <button
+            onClick={ouvrirScanner}
+            style={{
+              display: 'flex', alignItems: 'center', gap: spacing.sm,
+              background: colors.blue,
+              border: 'none', borderRadius: radius.md,
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              color: colors.text, fontSize: fontSize.base,
+              fontWeight: font.weight.semibold, fontFamily: font.sans,
+              cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+              <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+              <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+              <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+              <rect x="7" y="7" width="3" height="3"/>
+              <rect x="14" y="7" width="3" height="3"/>
+              <rect x="7" y="14" width="3" height="3"/>
+              <rect x="14" y="14" width="3" height="3"/>
+            </svg>
+            Ajouter
+          </button>
         </div>
 
         {/* États */}
@@ -440,14 +621,169 @@ export default function MesCartes() {
 
         {!loading && !error && cartes.length === 0 && (
           <div style={{ textAlign: 'center', padding: `${spacing.xxl}px ${spacing.lg}px` }}>
-            <p style={{ color: colors.textMuted, fontSize: fontSize.base, margin: 0 }}>
-              Aucune carte associée à ce numéro
+            <p style={{ color: colors.textMuted, fontSize: fontSize.base, margin: `0 0 ${spacing.md}px` }}>
+              Aucune carte pour l'instant
             </p>
+            <button
+              onClick={ouvrirScanner}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: spacing.sm,
+                background: colors.blue, border: 'none', borderRadius: radius.md,
+                padding: `${spacing.sm}px ${spacing.lg}px`,
+                color: colors.text, fontSize: fontSize.base,
+                fontWeight: font.weight.semibold, fontFamily: font.sans,
+                cursor: 'pointer',
+              }}
+            >
+              Scanner un QR code
+            </button>
           </div>
         )}
 
         {cartes.map(carte => <CarteItem key={carte.id} carte={carte} />)}
       </div>
+
+      {/* Modal scanner */}
+      {scannerOuvert && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.92)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            padding: spacing.lg,
+          }}
+        >
+          <div style={{
+            width: '100%', maxWidth: 360,
+            background: colors.surface,
+            borderRadius: radius.xl,
+            overflow: 'hidden',
+          }}>
+            {/* En-tête modal */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: `${spacing.md}px ${spacing.lg}px`,
+              borderBottom: `1px solid ${colors.border}`,
+            }}>
+              <span style={{ color: colors.text, fontWeight: font.weight.semibold, fontSize: fontSize.md }}>
+                Ajouter une carte
+              </span>
+              <button
+                onClick={fermerScanner}
+                style={{
+                  background: 'none', border: 'none',
+                  color: colors.textMuted, fontSize: fontSize.xl,
+                  cursor: 'pointer', padding: 0, lineHeight: 1,
+                  fontFamily: font.sans,
+                }}
+              >
+                x
+              </button>
+            </div>
+
+            {/* Zone scanner */}
+            {scanEtat === 'idle' && (
+              <>
+                <div
+                  id="qr-scanner-zone"
+                  style={{ width: '100%', background: colors.bg }}
+                />
+                <p style={{
+                  color: colors.textMuted, fontSize: fontSize.sm,
+                  textAlign: 'center', padding: `${spacing.sm}px ${spacing.lg}px ${spacing.md}px`,
+                  margin: 0,
+                }}>
+                  Pointez la caméra vers le QR code du commerçant
+                </p>
+              </>
+            )}
+
+            {/* Demande de nom (premier scan, pas de compte existant) */}
+            {scanEtat === 'besoin_nom' && (
+              <div style={{ padding: spacing.lg, display: 'flex', flexDirection: 'column', gap: spacing.md }}>
+                <p style={{ color: colors.textMuted, fontSize: fontSize.base, margin: 0, textAlign: 'center' }}>
+                  Entrez votre nom pour créer votre carte
+                </p>
+                <input
+                  type="text"
+                  value={nomSaisi}
+                  onChange={e => setNomSaisi(e.target.value)}
+                  placeholder="Marie Tremblay"
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    background: colors.bg,
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: radius.md,
+                    padding: '12px 14px',
+                    color: colors.text,
+                    fontSize: fontSize.md,
+                    fontFamily: font.sans,
+                    outline: 'none',
+                  }}
+                />
+                <button
+                  onClick={() => nomSaisi.trim() && appelRejoindre(scanSlug, nomSaisi.trim())}
+                  disabled={!nomSaisi.trim()}
+                  style={{
+                    background: nomSaisi.trim() ? colors.blue : colors.surface,
+                    border: 'none', borderRadius: radius.md,
+                    padding: '13px',
+                    color: colors.text, fontSize: fontSize.md,
+                    fontWeight: font.weight.semibold, fontFamily: font.sans,
+                    cursor: nomSaisi.trim() ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  Créer ma carte
+                </button>
+              </div>
+            )}
+
+            {/* Succès */}
+            {scanEtat === 'succes' && (
+              <div style={{ padding: `${spacing.xl}px ${spacing.lg}px`, textAlign: 'center' }}>
+                <div style={{
+                  width: 56, height: 56, borderRadius: '50%',
+                  background: 'rgba(20,200,120,0.15)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: `0 auto ${spacing.md}px`,
+                }}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#14C87A" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </div>
+                <p style={{ color: colors.text, fontWeight: font.weight.semibold, fontSize: fontSize.md, margin: `0 0 ${spacing.xs}px` }}>
+                  {scanMessage}
+                </p>
+                <p style={{ color: colors.textMuted, fontSize: fontSize.sm, margin: 0 }}>
+                  Ajout à votre wallet...
+                </p>
+              </div>
+            )}
+
+            {/* Erreur */}
+            {scanEtat === 'erreur' && (
+              <div style={{ padding: `${spacing.xl}px ${spacing.lg}px`, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: spacing.md }}>
+                <p style={{ color: colors.error, fontSize: fontSize.base, margin: 0 }}>
+                  {scanMessage}
+                </p>
+                <button
+                  onClick={fermerScanner}
+                  style={{
+                    background: colors.surface, border: `1px solid ${colors.border}`,
+                    borderRadius: radius.md, padding: '12px',
+                    color: colors.text, fontSize: fontSize.base,
+                    fontFamily: font.sans, cursor: 'pointer',
+                  }}
+                >
+                  Fermer
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
